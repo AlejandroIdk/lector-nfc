@@ -3,16 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lector NFC Web</title>
+    <title>Registro de Asistencia NFC</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+<body>
     <h1>Registro de Asistencia NFC</h1>
-    <p>Acerca tu tarjeta al celular para leerla</p>
-    <button id="startBtn">Iniciar lectura NFC</button>
+    <button id="startBtn">Iniciar lectura</button>
     <p id="status"></p>
-    <p id="data"></p>
+
+    <table id="tablaRegistros">
+        <thead>
+            <tr>
+                <th>Tarjeta</th>
+                <th>Fecha y Hora</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 
     <script>
+        // Cargar registros guardados
+        const registros = JSON.parse(localStorage.getItem("asistencias")) || [];
+        actualizarTabla();
+
         document.getElementById("startBtn").addEventListener("click", async () => {
             if ("NDEFReader" in window) {
                 try {
@@ -21,18 +39,15 @@
                     await ndef.scan();
 
                     ndef.onreading = event => {
-                        const { serialNumber, message } = event;
-                        document.getElementById("status").textContent = "Tarjeta detectada ✅";
-                        document.getElementById("data").textContent = `ID: ${serialNumber || "No disponible"}`;
+                        const id = event.serialNumber || "No disponible";
+                        const fecha = new Date().toLocaleString();
 
-                        // Si quieres enviar el dato a tu servidor:
-                        /*
-                        fetch("https://TU-SERVIDOR.com/registro.php", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ id: serialNumber })
-                        });
-                        */
+                        // Guardar en array y en localStorage
+                        registros.push({ tarjeta: id, fecha: fecha });
+                        localStorage.setItem("asistencias", JSON.stringify(registros));
+
+                        document.getElementById("status").textContent = `Registrado: ${id} - ${fecha}`;
+                        actualizarTabla();
                     };
                 } catch (error) {
                     document.getElementById("status").textContent = "Error: " + error;
@@ -41,6 +56,15 @@
                 alert("Tu navegador no soporta Web NFC (usa Chrome en Android).");
             }
         });
+
+        function actualizarTabla() {
+            const tbody = document.querySelector("#tablaRegistros tbody");
+            tbody.innerHTML = "";
+            registros.forEach(r => {
+                const fila = `<tr><td>${r.tarjeta}</td><td>${r.fecha}</td></tr>`;
+                tbody.innerHTML += fila;
+            });
+        }
     </script>
 </body>
 </html>
